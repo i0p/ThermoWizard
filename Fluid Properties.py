@@ -8,6 +8,7 @@
 #  @license: GNU GPL, see COPYING for details.
 
 ### выводит теплофизические свойства водных растворов, в частности этиленгликолей и пропилен гликолей
+from CoolProp.CoolProp import PropsSI
 
 map_ = {"T": "Температура, °C", "D": "Плотность, кг/м**3",
 	"Cvmass": "Теплоемкость, Ср, кДж/(кг*К)",
@@ -52,13 +53,15 @@ def O(fluid='MEG-36%'):
 		return "\t".join(foo)
 	print_header(props)
 	print(strOut(round(T_freeze+3e-4,4)))
-	t_start=int(ABS(t((T_freeze))))
+	t_start = t_ = int(ABS(t((T_freeze))))
 	t_stop = 110
-	for t_ in range(t_start, t_stop, 5):
+	step = 2.5 # шаг температуры
+	while t_<= t_stop:
 		try:
 			print(strOut(T_k(t_)))
 		except ValueError:
 			pass
+		t_ += step
 
 """
 >>> O("MEG-40%")
