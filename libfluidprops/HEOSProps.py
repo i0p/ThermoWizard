@@ -93,7 +93,7 @@ def transformator(rawlistval):		#преобразовывает инфу о пе
 	foo = []
 	for l in re.split('\n',rawlistval):
 		a = re.split('\s?\t\s?',l)
-		a[0] = re.split("\s?,\s*?", a[0])
+		a[0] = re.split("\s?,\s+?", a[0])
 		foo.append(a)
 	return foo
 
@@ -113,6 +113,18 @@ def makeAliases(formteddata):
 >>> makeAliases(d[2][0])
 {' Dmass': 'D', ' DMASS': 'D', 'D': 'D'}
 >>>
+"""
+
+"""
+aliases = {}
+>>> makeAliases(d[2][0])
+{' Dmass': 'D', ' DMASS': 'D', 'D': 'D'}
+>>> aliases.update(makeAliases(d[2][0]))
+>>> aliases
+{' Dmass': 'D', ' DMASS': 'D', 'D': 'D'}
+>>> aliases.update(makeAliases(d[1][0]))
+>>> aliases
+{' Dmolar': 'DMOLAR', 'DMOLAR': 'DMOLAR', ' Dmass': 'D', ' DMASS': 'D', 'D': 'D'}
 """
 
 class TIFPoint:
