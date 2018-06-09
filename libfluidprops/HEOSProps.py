@@ -89,18 +89,18 @@ T_REDUCING, T_reducing 	K 	O 	True 	Temperature at the reducing point
 V, VISCOSITY, viscosity 	Pa s 	O 	False 	Viscosity
 Z 	  	O 	False 	Compressibility factor"""
 
-def transformator(rawlistval):
-	foo = [re.split('\s?\t\s?',l) for l in re.split('\n',rawlistval)]
+def transformator(rawlistval):		#преобразовывает инфу о переменных в удобный формат
+	foo = []
+	for l in re.split('\n',rawlistval):
+		a = re.split('\s?\t\s?',l)
+		a[0] = re.split("\s?,\s*?", a[0])
+		foo.append(a)
 	return foo
 
 """
 >>> d = transformator(a)
->>> len(d)
-73
->>> d[0]
-['DELTA, Delta', '', 'IO', 'False', 'Reduced density (rho/rhoc)']
->>> d[-1]
-['Z', '', 'O', 'False', 'Compressibility factor']
+>>> d[2]
+[['D', ' DMASS', ' Dmass'], 'kg/m^3', 'IO', 'False', 'Mass density']
 >>>
 """
 
