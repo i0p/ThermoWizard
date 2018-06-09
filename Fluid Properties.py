@@ -59,8 +59,7 @@ def O(fluid='MEG-36%'):
 	while t_<= t_stop:
 		try:
 			print(strOut(T_k(t_)))
-		except ValueError:
-			pass
+		except ValueError: pass
 		t_ += step
 
 """
