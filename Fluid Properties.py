@@ -8,6 +8,7 @@
 #  @license: GNU GPL, see COPYING for details.
 
 ### выводит теплофизические свойства водных растворов, в частности этиленгликолей и пропилен гликолей
+
 from CoolProp.CoolProp import PropsSI
 
 map_ = {"T": "Температура, °C", "D": "Плотность, кг/м**3",
