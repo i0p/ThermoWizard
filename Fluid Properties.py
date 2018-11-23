@@ -60,7 +60,8 @@ def O(fluid='MEG-36%'):
 	while t_<= t_stop:
 		try:
 			print(strOut(T_k(t_)))
-		except ValueError: pass
+		except ValueError:
+			pass
 		t_ += step
 
 """
@@ -94,8 +95,10 @@ def O(fluid='MEG-36%'):
 100.0	1000.4539448	3789.2951495	0.4832614	0.0005844
 """
 
-def main():
+def main(foo):
 
 	return 0
 
-if __name__ == "__main__": sys.exit(main(sys.argv))
+if __name__ == "__main__":
+        import sys
+        sys.exit(main(sys.argv))
