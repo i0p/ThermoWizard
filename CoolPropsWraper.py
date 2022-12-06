@@ -4,14 +4,14 @@ import re
 
 class mainProps:
 	props = {
-                "t": ("Temperature", "C"),
+		"t": ("Temperature", "C"),
 		"T": ("Temperature", "K"),
 		"D": ("Mass density", "kg/m^3"),
 		"Cpmass":("Specific heat", "J/kg/K"),
 		"L": ("Termal conductivity", "W/m/K"),
 		"V": ("Viscosity", "Pa s"),                
 		"PRANDTL": ("Prandtl number", ""),
-                "T_freeze": ("Freezing temperature for incompressible solutions", "K")
+		"T_freeze": ("Freezing temperature for incompressible solutions", "K")
 		}
 	def __init__(self, T=273.15, P=101325,medianame="Water"):
 		self.T = T
@@ -20,7 +20,7 @@ class mainProps:
 		
 	def t(self):
 		return self.T - 273.15
-        
+	
 	def mainProps(self):
 		foo = {}
 		foo["t"] = self.t()
@@ -147,14 +147,20 @@ MEDIA={"MEG": "Ethylene Glycol - aq",
 """
 
 class humidairprops:
-	def __init__ (self, t, R=None, W=None, P=99700):
+	def __init__ (self, t, R=None, W=None, Hha=None, P=99700):
 		self.t, self.P = t, P
 		if R is not None:
 			self.R = R
 			self.W = HAPropsSI('W','T',self.T,'P',self.P,'R',self.R)	# Humidity Ratio [kg water/kg dry air]
+			self.Hha = HAPropsSI('Hha','T',self.T,'P',self.P,'R',self.R)
 		elif W is not None:
 			self.W = W
-			self.R = HAPropsSI('R','T',self.T,'P',self.P,'W',self.W)                
+			self.R = HAPropsSI('R','T',self.T,'P',self.P,'W',self.W)
+			self.Hha = HAPropsSI('Hha','T',self.T,'P',self.P,'W',self.W)
+		elif Hha is not None:
+			self.Hha = Hha                                                  # Mixture enthalpy per humid air[J/kg humid air]
+			self.R = HAPropsSI('R','T',self.T,'P',self.P,'Hha',self.Hha)
+			self.W = HAPropsSI('W','T',self.T,'P',self.P,'Hha',self.Hha)
 		
 		self.Vha = HAPropsSI('Vha','T',self.T,'P',self.P,'R',self.R)	# Mixture volume per unit humid air
 		self.Vda = HAPropsSI('Vda','T',self.T,'P',self.P,'R',self.R)	# Mixture volume per unit dry air
@@ -187,9 +193,9 @@ class Capacity:
 		p2 = self.p2
 		if t2:			
 			p2 = self._p2 = humidairprops(t2,
-                                                      R=HAPropsSI('R','T', t2+273.15,'P', p1.P,'W',p1.W)
-                                                      )					#тут будет дополнительная точка
-		return self.flow * self.multi/self.p1.Vha*(p2.h-self.p1.h)
+						      R=HAPropsSI('R','T', t2+273.15,'P', p1.P,'W',p1.W)
+						      )					#тут будет дополнительная точка
+		return self.flow * self.multi*self.p1.Vha*(p2.h-self.p1.h)
 
 	def Sensible(self, t2=None):
 		p2 = self.p2
@@ -197,7 +203,7 @@ class Capacity:
 			self.Total(t2)
 			p2 = self._p2
 
-		return self.flow * self.multi * self.p1.cp / self.p1.Vha * (p2.t - self.p1.t)
+		return self.flow * self.multi * self.p1.cp * self.p1.Vha * (p2.t - self.p1.t)
 
 """
 >>> p1 = humidairprops(18,R=0.5, P=101325)
@@ -211,6 +217,98 @@ class Capacity:
 >>> cpct.Sensible()
 3465.0050922393866
 """
+
+def Cooling(p1, t2):
+	try:
+		p2 = humidairprops(t2,
+			      W=HAPropsSI('W','T', t2+273.15,'P', p1.P,'W',p1.W)
+			      )
+	except:                                       #исключение вообще никак не обоработано
+		p2 = humidairprops(t2, R=0.99)
+	return p2
+
+""">>> p2 = Cooling(p1, 13)"""
+
+
+###----------расчет многих расходов
+
+
+"""
+>>> rawInput='''21600	21600	26,3/13,0	26,3/13,2
+34900	39672	32,0/13,0	26,3/13,2
+20300	22968	32,0/13,0	26,3/13,2
+36100	22968	32,0/13,0	26,3/13,2
+38170	37332	32,0/13,0	26,3/13,2
+13600	9972 	22,0/11,0	26,3/13,2
+15000	22968	22,0/11,0	26,3/13,2
+15000	22968	22,0/11,0	26,3/13,2
+15000	9972	22,0/11,0	26,3/13,2
+16000	22968	22,0/11,0	26,3/13,2
+12000	0	24,5/19,5	0'''
+"""
+
+I = 56800 #J/kg humid air
+indexmap= ((0,2,3), (1,4,5))
+
+def transform(raw):
+	pat = re.compile("[,]")
+	pat2 = re.compile(r"\s?/\s?")
+	sep = [	[float(n) for n in line.split() ] for line in pat2.sub( "\t", pat.sub(".",raw)).split("\n")]
+	return sep
+
+def massCalc(rawInput):
+	Total = []
+	for paramset in transform(rawInput):
+		foo = []
+		for indx in indexmap:
+			flow = paramset[indx[0]]
+			t1 = paramset[indx[1]]
+			t2 = paramset[indx[2]]
+			try:
+				p1 = humidairprops(t1,
+					   Hha=I,
+					    P=99100
+					   )
+			except:                                       #исключение вообще никак не обоработано
+				p1 = humidairprops(t1,
+					   R=0.56,
+					    P=99100
+					   )
+			p2 = Cooling(p1, t2)
+			foo.append( Capacity(p2,p1,flow).Total() )
+		Total.append(foo)
+	return Total
+
+def ppRint(foo):
+	for line in foo:
+		print(f"{line[0]/1000:.1f}\t{line[1]/1000:.1f}")
+
+"""
+>>> Tot = massCalc(rawInput2)
+>>> ppRint(Tot)
+102.4	99.9
+164.4	183.5
+95.6	106.2
+170.1	106.2
+179.8	172.7
+79.9	46.1
+88.1	106.2
+88.1	106.2
+88.1	46.1
+94.0	106.2
+14.6	0.0"""
+
+'''>>> rawInput0="""14000	14000	28,5/13,0	0/0
+14000	14000	28,5/13,0	0/0
+20000	20000	28,5/12,0	0/0
+30000	30000	28,5/13,0	0/0"""
+>>> ppRint(
+	massCalc(rawInput0)
+	)
+66.2	0.0
+66.2	0.0
+105.9	0.0
+141.9	0.0'''
 
 class pipe:
 	pipepattern = re.compile(r"(?P<Dout>\d+([,.]\d+)?)[xх](?P<thin>\d+([,.]\d+)?)", re.I)
