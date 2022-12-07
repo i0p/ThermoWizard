@@ -367,3 +367,26 @@ for t, R in ((-15, 0.85), (0,0.85), (8,0.6), (26,0.526)):
 		R=HAPropsSI('R','T', T(25),'P', p1.P,'W',p1.W)
 		)
 	print(f"{p1.t} ->\t{p2.t}°C\t{p2.R*100:2.1f}%\n\t{p3.t}°C\t{p3.R*100:2.1f}%")
+
+###=== KVS
+
+def DP(Q, Kvs, rho):
+	"""Kv = m3/h - Flow coefficient
+Q = m3/h - Flow
+Qn = m3n/h - Normal flow (20°C 760mm Hg)
+P1 = bar - Inlet pressure - (Gauge pressure + 1)
+P2 = bar - Outlet pressure - (Gauge pressure – 1)
+DP = bar - Pressure drop - (Differential pressure between inlet and outlet pressure)
+r = Kg/dm³ - Relative density with respect to water (Water at 4°C = 1)
+rn = Kg/dm³ - Normal relative density as to the air
+G = Kg/h - Mass
+t = °C - Inlet media temperature
+V1 = m3/Kg - Inlet specific volume
+V2 = m3/Kg - Outlet specific volume referred to “P2” pressure and “t” temperature"""
+	return rho * (Q/Kvs)**2
+
+""">>> DP(Q=13.1,
+   Kvs=83,
+   rho=PropsSI('D', 'T', 273.15+5, 'P', 101325, 'INCOMP::AN-45%')/1000
+   )*1e5
+2692.6515791546803"""	
