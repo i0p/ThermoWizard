@@ -80,6 +80,16 @@ def capacity(t1, t2, mflow=None, vflow=None, media="Water", P=101325):
 	flow2 = mflow or vflow*D2
 	return (H2-H1)*flow1, (H2-H1)*flow2
 
+def FlowWaterHeatingPower(t1, t2, capacity, media="Water", P=101325):
+	T = lambda t: 273.15+t
+	H1 = PropsSI("H", "P", P, "T", T(t1), media)
+	D1 = PropsSI("D", "P", P, "T", T(t1), media)
+	H2 = PropsSI("H", "P", P, "T", T(t2), media)
+	D2 = PropsSI("D", "P", P, "T", T(t2), media)
+	mflow = capacity/(H2-H1)
+	
+	return mflow, mflow/D1, mflow/D2 # kg/s, m3/s, m3/s
+
 def DisplayFluidValues(fluid,temp=[],concentration=40):
 	print("Fluid name: %s" % MEDIA[fluid])
 	print("Fluid desc: %s-%d%%" % (fluid, concentration))

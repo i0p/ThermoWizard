@@ -121,10 +121,18 @@ class heat2flow(object):
 	def __str__(self):
 		def altFlow(flow, w):
 			vf_l = flow/w.rho*1e3
+			vf_s = vf_l*1e-3
 			vf_m = flow*w.v*3.6e3
 			param = "t={0}°C".format(w.t)
-			s = "{parm:>15}:{val:>8.3f} {unit:<6} {alt_val:>6.3f} {alt_unit:<4} ".format(
-										parm=param, unit="l/s", val=vf_l, alt_val=vf_m, alt_unit='m³/h')
+			s = "{parm:>15}:{val:>8.3f} {unit:<6} {alt1_val:>8.4f} {alt1_unit:<4} {alt_val:>6.3f} {alt_unit:<4}".format(
+										parm=param,
+                                                                                unit="l/s",
+                                                                                val=vf_l,
+                                                                                alt1_val=vf_s,
+                                                                                alt1_unit='m³/s',
+                                                                                alt_val=vf_m,
+                                                                                alt_unit='m³/h'
+                                                                                )
 			return s
 
 		s = []
@@ -139,11 +147,11 @@ class heat2flow(object):
 		s.append(altFlow(self.flow, self.__w2))
 		return "\n".join(s)
 
-def table_I6(start=0, end=10, step=1):
-	points = (water(t=t) for t in range(start,end+1,step))
-	for w in points:
-		print("{w.t}\t{w.nu:^5.4g}\t{w.mu:^5.4g}\t{w.rho:^5.4g}\t\t\t\t{w.cp:^5.4g}\t{w.k:^6.5g}\t{w.alfa:^5.4g}".format(w=w))
-		
+def table_I6():
+	point = (water.water(t=t) for t in range(0,200,10))
+	for w in point:
+		print("{w.t}\t{w.rho:^5.4g}\t{w.h:^5.4g}\t{w.cp:^5.4g}\t{w.k:^5.4g}\t{w.alfa:^5.4g}\t{w.mu:^5.4g}\t{w.nu:^5.4g}".format(w=w))
+
 #>>> from sys import path; path.append('script'); from water import heat2flow, water
 #>>> print(heat2flow(t1=90, t2=70, Q=64140))
 
