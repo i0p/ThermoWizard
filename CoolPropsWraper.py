@@ -11,7 +11,7 @@ class mainProps:
 		"L": ("Termal conductivity", "W/m/K"),
 		"V": ("Viscosity", "Pa s"),                
 		"PRANDTL": ("Prandtl number", ""),
-		"T_freeze": ("Freezing temperature for incompressible solutions", "K")
+		#"T_freeze": ("Freezing temperature for incompressible solutions", "K")
 		}
 	def __init__(self, T=273.15, P=101325,medianame="Water"):
 		self.T = T
@@ -69,6 +69,65 @@ class mainProps:
 		V=mp["V"],
 		Cpmass=mp["Cpmass"])
 	print(s.replace(".", ","))"""
+
+class ThermoWizard:
+    def __init__(self, T=273.15, P=101325, medianame="Water"):
+        self.T = T
+        self.P = P
+        self.medianame = medianame
+
+    def temperature_in_celsius(self): return self.T - 273.15
+    
+    def calculate_properties(self):
+        props = {}
+        props["t"] = self.temperature_in_celsius()
+        for prop, (name, unit) in self.get_property_map().items():
+            if prop == "T_freeze":
+                try:
+                    props[prop] = PropsSI(prop, "P", self.P, "T", self.T, self.medianame)
+                except ValueError as err:
+                    if "calc_T_freeze is not implemented" in err.args[0]:
+                        props[prop] = "N/A"
+            else:
+                try:
+                    props[prop] = PropsSI(prop, "P", self.P, "T", self.T, self.medianame)
+                except ValueError as err:
+                    if "Output parameter parsing failed; error:" not in err.args[0]:
+                        raise ValueError(err.args)
+        return props
+
+    def get_property_map(self):
+        property_map = {
+            "t": ("Temperature", "C"),
+            "T": ("Temperature", "K"),
+            "D": ("Mass density", "kg/m^3"),
+            "Cpmass": ("Specific heat", "J/kg/K"),
+            "L": ("Termal conductivity", "W/m/K"),
+            "V": ("Viscosity", "Pa s"),
+            "PRANDTL": ("Prandtl number", ""),
+        }
+        try:
+            PropsSI("T_freeze", "P", self.P, "T", self.T, self.medianame)
+            property_map["T_freeze"] = ("Freezing temperature", "K")
+        except ValueError as err:
+            if "calc_T_freeze is not implemented" in err.args[0]:
+                property_map["T_freeze"] = ("Freezing temperature", "N/A")
+        return property_map
+
+    def pretty_print(self, units="SI"):
+        props = self.calculate_properties()
+        formatstring = "{}\t{}\t{}" if units == "SI" else "{}\t{}"
+        result = [formatstring.format(name, unit, props.get(prop, "N/A")) for prop, (name, unit) in self.get_property_map().items()]
+        print("\n".join(result))
+
+"""
+# Пример использования класса
+>>> tw = ThermoWizard(T=300, P=100000, medianame="Water")
+>>> tw.pretty_print(units="SI")
+"""
+###
+### класс ThermoWizard замена mainprops
+###
 
 def capacity(t1, t2, mflow=None, vflow=None, media="Water", P=101325):
 	T = lambda t: 273.15+t
