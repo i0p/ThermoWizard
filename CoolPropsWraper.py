@@ -2,6 +2,38 @@ from CoolProp.CoolProp import PropsSI, HAPropsSI
 from tabulate import tabulate
 import re
 
+
+from scipy.constants import zero_Celsius
+class Temperature:
+        """содержит температуру в кельвинах или градусах Цельсия"""
+        class _Kelvin:
+                def __get__(self, obj, cls):
+                        try:
+                                obj.__dict__["T"] = obj.__dict__["t"]  + zero_Celsius
+                        except KeyError: pass
+                        return obj.__dict__["T"]
+                
+                def __set__(self, obj, val):
+                        assert isinstance(val, (int, float)), f"inNumber is neither int nor float, it is {type(val)}"
+                        obj.__dict__['T'] = val
+        class _Celsius:
+                def __get__(self, obj, cls):
+                        try:
+                                obj.__dict__["t"] = obj.__dict__["T"] - zero_Celsius
+                        except KeyError: pass
+                        return obj.__dict__["t"]
+                def __set__(self, obj, val):
+                        assert isinstance(val, (int, float)), f"inNumber is neither int nor float, it is {type(val)}"
+                        obj.__dict__['t'] = val
+        t = _Celsius()
+        T = _Kelvin()
+        def __init__(self, *, t=None, T=None):
+                assert t is None or T is None, "only one 't' or 'T' is required"
+                if t is not None:
+                        self.t = t
+                if T is not None:
+                        self.T = T
+
 class mainProps:
 	props = {
 		"t": ("Temperature", "C"),
@@ -11,7 +43,7 @@ class mainProps:
 		"L": ("Termal conductivity", "W/m/K"),
 		"V": ("Viscosity", "Pa s"),                
 		"PRANDTL": ("Prandtl number", ""),
-		#"T_freeze": ("Freezing temperature for incompressible solutions", "K")
+		"T_freeze": ("Freezing temperature for incompressible solutions", "K")
 		}
 	def __init__(self, T=273.15, P=101325,medianame="Water"):
 		self.T = T
@@ -128,6 +160,37 @@ class ThermoWizard:
 ###
 ### класс ThermoWizard замена mainprops
 ###
+
+class Pump:
+    """The ideal hydraulic power to drive a pump depends on:
+q = flow (m3/h)
+rho = density of fluid (kg/m3)
+g = acceleration of gravity (9.81 m/s2)
+h = differential head (m)
+dP = differential pressure (N/m2, Pa)"""
+    def __init__(self, q, h, rho=1000, g=9.81, efficiency=0.6):
+        self.q = q
+        self.h = h
+        self.rho = rho
+        self.g = g
+        self.efficiency = efficiency
+    def hydraulic_power(self):
+        """Ph(kW) = hydraulic power (kW)"""
+        return self.q*self.dP()/3.6e6
+    def dP(self):
+        """differential pressure (N/m2, Pa)"""
+        return self.rho*self.g*self.h
+    def shaft_power(self):
+        """Ps(kW)  = shaft power (kW)"""
+        return self.hydraulic_power()/self.efficiency
+    def __str__(self):
+        f = [f'flow capacity [m3/h]: {self.q}',
+             f'density of fluid [kg/m3]: {self.rho}',
+             f'differential head [m]: {self.h}',
+             f'pump efficiency: {self.efficiency}',
+             f'hydraulic power [kW]: {self.hydraulic_power():.4f}',
+             f'shaft power [kW]: {self.shaft_power():.4f}']
+        return "\n".join(f)
 
 def capacity(t1, t2, mflow=None, vflow=None, media="Water", P=101325):
 	T = lambda t: 273.15+t
@@ -296,6 +359,21 @@ def Cooling(p1, t2):
 		p2 = humidairprops(t2, R=0.99)
 	return p2
 
+def condensate(tw, ta, R=0.6, P=99700):
+    """возвращает максимальное количество влаги, содержащееся в воздухе кг/кг
+подрузамевается, что не может конденсироваться больше чем содержится в воздухе"""
+    p1 = humidairprops(t=tw, R=0.95, P=P)
+    p2 = humidairprops(t=ta, R=R, P=P)
+    return p2.W - p1.W
+"""
+condensate(6,27)
+0.00809154772826041
+condensate(6,29)
+0.009828920192655837
+condensate(6,30)
+0.010769627470552203
+"""
+
 """>>> p2 = Cooling(p1, 13)"""
 
 
@@ -458,4 +536,4 @@ V2 = m3/Kg - Outlet specific volume referred to “P2” pressure and “t” te
    Kvs=83,
    rho=PropsSI('D', 'T', 273.15+5, 'P', 101325, 'INCOMP::AN-45%')/1000
    )*1e5
-2692.6515791546803"""	
+2692.6515791546803"""
