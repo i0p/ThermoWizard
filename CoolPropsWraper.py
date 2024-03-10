@@ -34,11 +34,23 @@ class Temperature:
                 if T is not None:
                         self.T = T
 
-class HumidAirProps: ##переписать чтоб во как: HAPropsSI(*self._inputs)
-    def __init__ (self, **inputs):
-        self._inputs = tuple(chain.from_iterable(inputs.items()))
+po1 = {'T':298.15,'P':101325,'R':0.5}
+
+class HUAir:
+    def __init__(self, **inputs):
+        self._inputs = tuple(chain.from_iterable(sorted(inputs.items())))
+
     def __getattr__(self, attr):
-        return (attr,) + self._inputs
+        try:
+            self.__dict__[attr]
+        except KeyError:
+            self.__dict__[attr] = HAPropsSI(*((attr,) + self._inputs))
+            return self.__dict__[attr]
+    @property
+    def density(self) -> float: #повзаимствовано у PyFluids
+        """Mass density per humid air unit [kg/m3]."""
+        return 1 / self.Vha
+
 
 class mainProps:
 	props = {
