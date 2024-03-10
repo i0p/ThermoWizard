@@ -1,7 +1,7 @@
 from CoolProp.CoolProp import PropsSI, HAPropsSI
 from tabulate import tabulate
 import re
-
+from itertools import chain
 
 from scipy.constants import zero_Celsius
 class Temperature:
@@ -33,6 +33,12 @@ class Temperature:
                         self.t = t
                 if T is not None:
                         self.T = T
+
+class HumidAirProps: ##переписать чтоб во как: HAPropsSI(*self._inputs)
+    def __init__ (self, **inputs):
+        self._inputs = tuple(chain.from_iterable(inputs.items()))
+    def __getattr__(self, attr):
+        return (attr,) + self._inputs
 
 class mainProps:
 	props = {
