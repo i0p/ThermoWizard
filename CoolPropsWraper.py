@@ -22,7 +22,7 @@ def Pressure(altitude):
         raise ValueError(
             "Altitude above sea level should be between -5000 and 11000 meters!"
             )
-    return 101325 * (1 - 2.25577e-5 * altitude) ** 5.2559
+    return 101325 * (1 - 2.25577e-5 * altitude) ** 5.25588
 
 class Temperature:
         """содержит температуру в кельвинах или градусах Цельсия"""
@@ -68,8 +68,23 @@ class HUAir:
         """Mass density per humid air unit [kg/m3]."""
         return 1 / self.Vha
 
+class AirSide:
+    UNITS={"m3/h": 1/3600,
+           "m3/s" : 1
+           }
+    def __init__(self, in_air, out_air, flow, units="m3/h"):
+        self.air_in = in_air
+        self.air_out = out_air
+        self.flow = flow
+        self.units = units
+    @property
+    def multi(self):
+        return self.UNITS[self.units]
 
-def pprint(humidair: HUAir): #именно этот
+    def Total(self):
+        return (self.air_out.Hha - self.air_in.Hha)*(self.flow*self.multi/self.air_out.Vha)
+
+def pprint(humidairpoints: HUAir): #именно этот
     parameters_map = {'B' : 'B', 'Twb' : 'B', 'T_wb' : 'B', 'WetBulb ' : 'B',
                       'C' : 'cp', 'cp ' : 'cp',
                       'Cha' : 'Cha', 'cp_ha ' : 'Cha',
@@ -112,7 +127,17 @@ def pprint(humidair: HUAir): #именно этот
                        'W' : ('kg water/kg dry air', 'Humidity Ratio'),
                        'Z' : ('', 'Compressibility factor (Z=pv/(RT))')
                        }
-    data = [ (parameters_desc[parameters_map[param]][1], parameters_desc[parameters_map[param]][0], getattr(humidair, param) ) for param in ("P", "T", "R", "Twb", "Hda", "Hha", "W", "DewPoint", "density", "P_w")]
+    #data = [ (parameters_desc[parameters_map[param]][1], parameters_desc[parameters_map[param]][0], getattr(humidair, param) ) for param in ("P", "T", "R", "Twb", "Hda", "Hha", "W", "DewPoint", "density", "P_w")]
+    if isinstance(humidairpoints, HUAir): humidairpoints = (humidairpoints, )
+    data = []
+    for param in ("P", "T", "R", "Twb", "Hda", "Hha", "W", "DewPoint", "density", "P_w"):
+            _ = (parameters_desc[parameters_map[param]][1],
+                    parameters_desc[parameters_map[param]][0],
+                    )
+            for humidair in humidairpoints:
+                    _ = _ + (getattr(humidair, param),)
+            data.append(_)
+                    
     print(tabulate(data, tablefmt="plain"))
 
 class mainProps:
