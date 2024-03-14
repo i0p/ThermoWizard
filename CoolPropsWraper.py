@@ -54,8 +54,6 @@ class Temperature:
                 if T is not None:
                         self.T = T
 
-p01 = {'T':298.15,'P':101325,'R':0.5}
-
 class HUAir:
     def __init__(self, **inputs):
         self._inputs = tuple(chain.from_iterable(sorted(inputs.items())))
@@ -67,6 +65,26 @@ class HUAir:
     def density(self) -> float: #повзаимствовано у PyFluids
         """Mass density per humid air unit [kg/m3]."""
         return 1 / self.Vha
+
+
+#Eurovent Reference design temperatures
+#Operating conditions for standard rating:
+#Comfort Air Conditioner - Cooling mode
+p00_indoor_unit = {
+        "Cooling": {'T':Temperature(t=27).T,'P':101325,'Twb':Temperature(t=19).T},
+        "Heating": {'T':Temperature(t=20).T,'P':101325,'Twb':Temperature(t=15).T}
+                }
+
+p00_outdoor_unit = {
+        "Cooling": {'T':Temperature(t=35).T,'P':101325,'Twb':Temperature(t=24).T},
+        "Heating": {'T':Temperature(t=7).T,'P':101325,'Twb':Temperature(t=6).T}
+                }
+
+p01 = HUAir(**p00_indoor_unit["Cooling"])
+p02 = HUAir(**p00_indoor_unit["Heating"])
+
+p11 = HUAir(**p00_outdoor_unit["Cooling"])
+p12 = HUAir(**p00_outdoor_unit["Heating"])
 
 class AirSide:
     UNITS={"m3/h": 1/3600,
@@ -84,7 +102,7 @@ class AirSide:
     def Total(self):
         return (self.air_out.Hha - self.air_in.Hha)*(self.flow*self.multi/self.air_out.Vha)
 
-def pprint(humidairpoints: HUAir): #именно этот
+def pprint(humidairpoints: HUAir, parameter=None): #именно этот
     parameters_map = {'B' : 'B', 'Twb' : 'B', 'T_wb' : 'B', 'WetBulb ' : 'B',
                       'C' : 'cp', 'cp ' : 'cp',
                       'Cha' : 'Cha', 'cp_ha ' : 'Cha',
@@ -130,7 +148,10 @@ def pprint(humidairpoints: HUAir): #именно этот
     #data = [ (parameters_desc[parameters_map[param]][1], parameters_desc[parameters_map[param]][0], getattr(humidair, param) ) for param in ("P", "T", "R", "Twb", "Hda", "Hha", "W", "DewPoint", "density", "P_w")]
     if isinstance(humidairpoints, HUAir): humidairpoints = (humidairpoints, )
     data = []
-    for param in ("P", "T", "R", "Twb", "Hda", "Hha", "W", "DewPoint", "density", "P_w"):
+    parameters = ("P", "T", "R", "Twb", "Hda", "Hha", "W", "DewPoint", "density", "P_w")
+#    if parameter is None:            
+    if parameter in parameters_map: parameters = parameters + (parameter,)
+    for param in parameters:
             _ = (parameters_desc[parameters_map[param]][1],
                     parameters_desc[parameters_map[param]][0],
                     )
@@ -605,21 +626,21 @@ def heating(t1, R1, t2, flow, P=101235, units="m3/h"):
 1905.0944160104882
 """
 
-T = lambda t: 273.15+t
-
-for t, R in ((-15, 0.85), (0,0.85), (8,0.6), (26,0.526)):
-        p1 = humidairprops(
-                t=t, R=R,
-                P=101325)
-        p2 = humidairprops(
-                t=20,
-                R=HAPropsSI('R','T', T(20),'P', p1.P,'W',p1.W)
-                )
-        p3 = humidairprops(
-                t=25,
-                R=HAPropsSI('R','T', T(25),'P', p1.P,'W',p1.W)
-                )
-        print(f"{p1.t} ->\t{p2.t}°C\t{p2.R*100:2.1f}%\n\t{p3.t}°C\t{p3.R*100:2.1f}%")
+##T = lambda t: 273.15+t
+##
+##for t, R in ((-15, 0.85), (0,0.85), (8,0.6), (26,0.526)):
+##        p1 = humidairprops(
+##                t=t, R=R,
+##                P=101325)
+##        p2 = humidairprops(
+##                t=20,
+##                R=HAPropsSI('R','T', T(20),'P', p1.P,'W',p1.W)
+##                )
+##        p3 = humidairprops(
+##                t=25,
+##                R=HAPropsSI('R','T', T(25),'P', p1.P,'W',p1.W)
+##                )
+##        print(f"{p1.t} ->\t{p2.t}°C\t{p2.R*100:2.1f}%\n\t{p3.t}°C\t{p3.R*100:2.1f}%")
 
 ###=== KVS
 
