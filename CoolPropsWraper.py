@@ -70,6 +70,7 @@ class HUAir:
 #Eurovent Reference design temperatures
 #Operating conditions for standard rating:
 #Comfort Air Conditioner - Cooling mode
+
 p00_indoor_unit = {
         "Cooling": {'T':Temperature(t=27).T,'P':101325,'Twb':Temperature(t=19).T},
         "Heating": {'T':Temperature(t=20).T,'P':101325,'Twb':Temperature(t=15).T}
@@ -80,11 +81,11 @@ p00_outdoor_unit = {
         "Heating": {'T':Temperature(t=7).T,'P':101325,'Twb':Temperature(t=6).T}
                 }
 
-p01 = HUAir(**p00_indoor_unit["Cooling"])
-p02 = HUAir(**p00_indoor_unit["Heating"])
+p01 = HUAir(**p00_indoor_unit["Cooling"])       #готовые точки p01 для условий Eurovent
+p02 = HUAir(**p00_indoor_unit["Heating"])       #готовые точки p02       
 
-p11 = HUAir(**p00_outdoor_unit["Cooling"])
-p12 = HUAir(**p00_outdoor_unit["Heating"])
+p11 = HUAir(**p00_outdoor_unit["Cooling"])       #готовые точки p11
+p12 = HUAir(**p00_outdoor_unit["Heating"])       #готовые точки p12
 
 class AirSide:
     UNITS={"m3/h": 1/3600,
