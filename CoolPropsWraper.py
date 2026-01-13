@@ -129,6 +129,103 @@ def flow_book_print(func):
         return m_flow, v_in, v_out
     return wrapper
     
+def flow_book_perfect_print(func):
+    """
+    Декоратор с тонкой настройкой отступов:
+    - Средний столбец отодвинут вправо (+4 к левой колонке).
+    - Компактный средний столбец (+2 к ширине ед. изм.).
+    - Минималистичный правый столбец.
+    """
+    @functools.wraps(func)
+    def wrapper(t1, t2, capacity, media="Water", P=101325, **kwargs):
+        m_flow, v_in, v_out = func(t1, t2, capacity, media, P, **kwargs)
+        
+        data_points = [
+            ("Тепловая мощность", "Q", "Вт", capacity, 2),
+            ("Массовый расход", "m_f", "кг/с", m_flow, 4),
+            ("Объемный расход (вход)", "V_in", "л/с", v_in * 1000, 3),
+            ("Объемный расход (выход)", "V_out", "л/с", v_out * 1000, 3),
+            ("Средний объемный расход", "V_avg", "м³/ч", (v_in + v_out) * 1800, 2),
+        ]
+
+        # Расчет максимальных ширин
+        max_label_w = max(len(f"{d[0]} [{d[1]}]") for d in data_points)
+        max_unit_w = max(len(d[2]) for d in data_points)
+        max_int_w = max(len(str(int(d[3]))) for d in data_points)
+
+        print(f"\nОТЧЕТ: {media.upper()} ({t1}°C → {t2}°C)")
+        
+        # Динамическая ширина разделителя
+        # Лево + 4 пробела + (ЕдИзм + 2) + 1 пробел + Значение
+        line_w = max_label_w + 4 + (max_unit_w + 2) + (max_int_w + 6) 
+        print("—" * line_w)
+
+        for name, sym, unit, val, prec in data_points:
+            label = f"{name} [{sym}]"
+            val_str = f"{val:.{prec}f}"
+            int_p, dec_p = val_str.split('.')
+            
+            # Сборка строки:
+            # {label:<{max_label_w + 4}} -> Текст прижат влево, справа +4 пробела
+            # {unit:^{max_unit_w + 2}}   -> Ед.изм по центру, всего +2 пробела к ширине
+            # {int_p:>{max_int_w}}       -> Целая часть прижата к точке
+            
+            print(f"{label:<{max_label_w + 4}}" 
+                  f"{unit:^{max_unit_w + 2}} " 
+                  f"{int_p:>{max_int_w}}.{dec_p}")
+
+        print("—" * line_w + "\n")
+        
+        return m_flow, v_in, v_out
+    return wrapper
+    
+def flow_book_final_print(func):
+    @functools.wraps(func)
+    def wrapper(t1, t2, capacity, media="Water", P=101325, **kwargs):
+        # Получаем значения из основной функции
+        m_flow, v_in, v_out = func(t1, t2, capacity, media, P, **kwargs)
+        
+        # Расчет разности температур (интервал в K равен интервалу в °C)
+        dt_k = abs(t2 - t1)
+
+        # Формируем структуру данных
+        data_points = [
+            ("Температура на входе", "t_in", "°C", t1, 1),
+            ("Температура на выходе", "t_out", "°C", t2, 1),
+            ("Разность температур", "ΔT", "K", dt_k, 2),
+            ("Тепловая мощность", "Q", "Вт", capacity, 1),
+            ("Массовый расход", "ṁ", "кг/с", m_flow, 4),
+            (f"Объемный расход (вход) [V_in (t={t1}°C)]", "", "л/с", v_in * 1000, 3),
+            (f"Объемный расход (выход) [V_out (t={t2}°C)]", "", "л/с", v_out * 1000, 3),
+        ]
+
+        # Расчет ширины колонок
+        max_label_w = max(len(d[0]) for d in data_points)
+        max_unit_w = max(len(d[2]) for d in data_points)
+        max_int_w = max(len(str(int(d[3]))) for d in data_points)
+
+        print(f"\nРАСЧЕТ ПОТОКА: {media.upper()}")
+        print(f"Давление системы: {P/1000:.1f} кПа")
+        
+        total_w = max_label_w + max_unit_w + max_int_w + 16
+        print("—" * total_w)
+
+        for label, sym, unit, val, prec in data_points:
+            full_label = f"{label} [{sym}]" if sym else label
+            
+            val_str = f"{val:.{prec}f}"
+            int_p, dec_p = val_str.split('.')
+            
+            # Верстка по вашим правилам
+            print(f"{full_label:<{max_label_w + 8}}" 
+                  f"{unit:^{max_unit_w + 4}}" 
+                  f"{int_p:>{max_int_w}}.{dec_p}")
+
+        print("—" * total_w + "\n")
+        
+        return m_flow, v_in, v_out
+    return wrapper
+
 # --- Основные функции ---
 
 class Temperature:
@@ -341,7 +438,9 @@ def FlowWaterHeatingPower0(t1, t2, capacity, media="Water", P=101325):
 
 #@flow_pretty_print
 #@flow_simple_print
-@flow_book_print
+#@flow_book_print
+#@flow_book_perfect_print
+@flow_book_final_print
 def FlowWaterHeatingPower(t1, t2, capacity, media="Water", P=101325):
     """
     Расчет расхода теплоносителя на основе изменения энтальпии.
