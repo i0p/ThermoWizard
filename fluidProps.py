@@ -10,6 +10,21 @@
 import sys
 from libfluidprops.HEOSProps import TIFPoint
 
+class valve():
+    "гидравлиеское сопротивление клапана"
+    def __init__(self, DN, Kvs, G=0.0, Type=None):
+        self.Type = Type if Type else ""
+        self.DN = DN
+        self.Kvs = Kvs
+        self.G = float(G)
+    def dP(self, G=None, Kvs=None):
+        G = float(G) if G else self.G
+        Kvs = Kvs if Kvs else self.Kvs
+        return (G/Kvs)**2
+    def __str__(self):
+        return f'DN{self.DN}\ndP: {self.dP()} бар/{self.dP()*100} kPa'
+
+
 """
 def Q(p1, p2, L):
 	Qt = L*(1/p1.Vha)*(p1.H-p2.H)/3600

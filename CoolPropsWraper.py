@@ -1,9 +1,44 @@
-from CoolProp.CoolProp import PropsSI, HAPropsSI
-from tabulate import tabulate
 import re
+import functools
+
 from itertools import chain
 
+from CoolProp.CoolProp import PropsSI, HAPropsSI
 from scipy.constants import zero_Celsius
+from tabulate import tabulate
+
+# --- Декораторы оформления ---
+
+def flow_pretty_print(func):
+    """
+    Декоратор для табличного вывода результатов теплофизических расчетов.
+    Использует tabulate для формирования читаемого отчета в консоли.
+    """
+    @functools.wraps(func)
+    def wrapper(t1, t2, capacity, media="Water", P=101325, **kwargs):
+        # Вызов основной функции
+        m_flow, v_in, v_out = func(t1, t2, capacity, media, P, **kwargs)
+        
+        # Заголовок отчета
+        title = f" ОТЧЕТ: {media} | {t1}°C → {t2}°C | P={P/1000:.1f} кПа "
+        
+        # Формируем данные для таблицы
+        table = [
+            ["Параметр", "Значение", "Ед. изм."],
+            ["Мощность (Q)", f"{capacity/1000:.2f}", "кВт"],
+            ["Массовый расход (m)", f"{m_flow:.4f}", "кг/с"],
+            ["Объемный (V_in)", f"{v_in * 1000:.3f}", "л/с"],
+            ["Объемный (V_out)", f"{v_out * 1000:.3f}", "л/с"],
+            ["Объемный (Средний)", f"{(v_in + v_out) * 1800:.2f}", "м³/ч"]
+        ]
+        
+        print(f"\n{title.center(50, '=')}")
+        print(tabulate(table, headers="firstrow", tablefmt="fancy_grid", numalign="right"))
+        print("=" * 50 + "\n")
+        
+        return m_flow, v_in, v_out
+    return wrapper
+# --- Основные функции ---
 
 class Temperature:
         """содержит температуру в кельвинах или градусах Цельсия"""
@@ -213,6 +248,27 @@ def FlowWaterHeatingPower(t1, t2, capacity, media="Water", P=101325):
         
         return mflow, mflow/D1, mflow/D2 # kg/s, m3/s, m3/s
 
+@flow_pretty_print
+def FlowWaterHeatingPower2(t1, t2, capacity, media="Water", P=101325):
+    """
+    Расчет расхода теплоносителя на основе изменения энтальпии.
+    """
+    # Перевод в Кельвины через константу scipy
+    T1, T2 = t1 + zero_Celsius, t2 + zero_Celsius
+    
+    # Свойства на входе
+    h1 = PropsSI("H", "P", P, "T", T1, media)
+    d1 = PropsSI("D", "P", P, "T", T1, media)
+    
+    # Свойства на выходе
+    h2 = PropsSI("H", "P", P, "T", T2, media)
+    d2 = PropsSI("D", "P", P, "T", T2, media)
+    
+    # Массовый расход кг/с
+    mflow = capacity / (h2 - h1)
+    
+    return mflow, mflow / d1, mflow / d2
+
 def DisplayFluidValues(fluid,temp=[],concentration=40):
         print("Fluid name: %s" % MEDIA[fluid])
         print("Fluid desc: %s-%d%%" % (fluid, concentration))
@@ -223,7 +279,7 @@ def DisplayFluidValues(fluid,temp=[],concentration=40):
         for t in temp:
                 try:
                         mp = mainProps(T=273.15+t,medianame="INCOMP::%s-%d%%" % (fluid, concentration)).mainProps()
-                        s = "{t:4.1f}\t{T:5.2f}\t{L:.4f}\t{PRANDTL:.1f}\t{D:.1f}\t{V:.2e}\{Cpmass:.1f}".format(
+                        s = "{t:4.1f}\t{T:5.2f}\t{L:.4f}\t{PRANDTL:.1f}\t{D:.1f}\t{V:.2e}\t{Cpmass:.1f}".format(
                                 t=mp["T"]-273.15,
                                 T=mp["T"],
                                 L=mp["L"],
