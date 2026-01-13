@@ -38,6 +38,97 @@ def flow_pretty_print(func):
         
         return m_flow, v_in, v_out
     return wrapper
+    
+def flow_simple_print(func):
+    """
+    Декоратор для вывода результатов в текстовом формате:
+    Параметр [Обозначение, Ед. изм.]: --выравнивание-- Значение
+    """
+    @functools.wraps(func)
+    def wrapper(t1, t2, capacity, media="Water", P=101325, **kwargs):
+        m_flow, v_in, v_out = func(t1, t2, capacity, media, P, **kwargs)
+        
+        # Шаблон строки: левая часть (название и ед. изм) и правая (значение)
+        # :<45 — выравнивание левой колонки по ширине 45 символов
+        row_fmt = "{:<45} : {:>12}"
+        
+        print(f"\nРАСЧЕТ ПОТОКА: {media}")
+        print(f"Режим: {t1}°C -> {t2}°C при {P/1000:.1f} кПа")
+        print("-" * 60)
+        
+        # Список кортежей: (Наименование, Обозначение, Ед. изм, Значение, Формат числа)
+        results = [
+            ("Тепловая мощность", "Q", "Вт", capacity, ".2f"),
+            ("Массовый расход", "m_flow", "кг/с", m_flow, ".4f"),
+            ("Объемный расход на входе", "V_in", "л/с", v_in * 1000, ".3f"),
+            ("Объемный расход на выходе", "V_out", "л/с", v_out * 1000, ".3f"),
+            ("Средний объемный расход", "V_avg", "м³/ч", (v_in + v_out) * 1800, ".2f"),
+        ]
+        
+        for name, sym, unit, val, fmt in results:
+            label = f"{name} [{sym}, {unit}]"
+            print(row_fmt.format(label, format(val, fmt)))
+            
+        print("-" * 60 + "\n")
+        
+        return m_flow, v_in, v_out
+    return wrapper
+
+def flow_book_print(func):
+    """
+    Декоратор: Книжная верстка с выравниванием ед. изм. по центру 
+    и значений по десятичному разделителю.
+    """
+    @functools.wraps(func)
+    def wrapper(t1, t2, capacity, media="Water", P=101325, **kwargs):
+        m_flow, v_in, v_out = func(t1, t2, capacity, media, P, **kwargs)
+        
+        # Данные: Наименование, Обозначение, Ед.изм, Значение, Точность
+        data = [
+            ("Тепловая мощность", "Q", "Вт", capacity, 2),
+            ("Массовый расход", "m_f", "кг/с", m_flow, 4),
+            ("Объемный расход (вход)", "V_in", "л/с", v_in * 1000, 3),
+            ("Объемный расход (выход)", "V_out", "л/с", v_out * 1000, 3),
+            ("Средний объемный расход", "V_avg", "м³/ч", (v_in + v_out) * 1800, 2),
+        ]
+
+        print(f"\nОТЧЕТ ПО ТЕПЛОНОСИТЕЛЮ: {media.upper()}")
+        print(f"Параметры среды: {t1}°C → {t2}°C | Давление: {P/1000:.1f} кПа")
+        print("—" * 85)
+
+        # Настройка ширины колонок
+        col_name_width = 40  # Наименование [обозначение]
+        col_unit_width = 12  # Ед. изм. (центр)
+        col_int_width = 10   # Целая часть числа (право)
+
+        for name, sym, unit, val, precision in data:
+            # 1. Формируем левую часть
+            label = f"{name} [{sym}]"
+            
+            # 2. Формируем центр (ед. изм.)
+            unit_str = f"{unit}"
+            
+            # 3. Формируем правую часть (выравнивание по точке)
+            val_str = f"{val:.{precision}f}"
+            if '.' in val_str:
+                int_part, dec_part = val_str.split('.')
+            else:
+                int_part, dec_part = val_str, ""
+
+            # Сборка строки:
+            # {label:<{width}}      - прижат влево
+            # {unit_str:^{width}}   - по центру
+            # {int_part:>{width}}   - целая часть прижата к точке
+            # .{dec_part}           - дробная часть уходит вправо
+            print(f"{label:<{col_name_width}} "
+                  f"{unit_str:^{col_unit_width}} "
+                  f"{int_part:>{col_int_width}}.{dec_part}")
+
+        print("—" * 85 + "\n")
+        
+        return m_flow, v_in, v_out
+    return wrapper
+    
 # --- Основные функции ---
 
 class Temperature:
@@ -238,7 +329,7 @@ def capacity(t1, t2, mflow=None, vflow=None, media="Water", P=101325):
         flow2 = mflow or vflow*D2
         return (H2-H1)*flow1, (H2-H1)*flow2
 
-def FlowWaterHeatingPower(t1, t2, capacity, media="Water", P=101325):
+def FlowWaterHeatingPower0(t1, t2, capacity, media="Water", P=101325):
         T = lambda t: 273.15+t
         H1 = PropsSI("H", "P", P, "T", T(t1), media)
         D1 = PropsSI("D", "P", P, "T", T(t1), media)
@@ -248,8 +339,10 @@ def FlowWaterHeatingPower(t1, t2, capacity, media="Water", P=101325):
         
         return mflow, mflow/D1, mflow/D2 # kg/s, m3/s, m3/s
 
-@flow_pretty_print
-def FlowWaterHeatingPower2(t1, t2, capacity, media="Water", P=101325):
+#@flow_pretty_print
+#@flow_simple_print
+@flow_book_print
+def FlowWaterHeatingPower(t1, t2, capacity, media="Water", P=101325):
     """
     Расчет расхода теплоносителя на основе изменения энтальпии.
     """
